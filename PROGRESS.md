@@ -40,6 +40,15 @@ Scaffold initial du repo à partir de SPEC.md / CLAUDE.md.
   (`https://github.com/christianbiango/husk-frontend.git`), premier commit
   fait. Pas de push — à faire à la demande.
 
+## 2026-08-18 — Badge de statut API
+
+Remplacé le texte gris discret du statut `/health` par un badge coloré
+(`AuthenticatedPlaceholder` dans `src/App.tsx`) : vert « Connecté à l'API »
+quand le backend répond, rouge « API injoignable » sinon, gris pendant la
+vérification. Vérifié en conditions réelles (Playwright) dans les deux cas —
+backend injoignable et un faux serveur `/health` local répondant `{status:
+"ok"}` avec les headers CORS nécessaires (Authorization + preflight).
+
 **Points en suspens :**
 - `.env` n'a pas pu être créé par Claude Code (règle de permission qui
   bloque l'écriture de fichiers `.env*`, probablement pour éviter les
