@@ -62,3 +62,20 @@ backend injoignable et un faux serveur `/health` local répondant `{status:
   simple `useState`. À revoir dès qu'un deuxième écran réel arrive.
 - Le contrat d'auth réel (PocketBase) reste à définir ; `login()` accepte
   actuellement n'importe quel email/mot de passe non vides.
+
+## 2026-08-18 — Badge API déplacé sur Login
+
+Le badge vert/rouge (voir entrée précédente) était sur l'écran placeholder
+post-connexion ; déplacé sur l'écran Login (extrait dans
+`src/components/ApiStatusBadge.tsx`) puisque le login reste entièrement
+mocké — aucun vrai appel réseau côté auth pour l'instant, seul `/health`
+reste un appel API réel dans ce repo. Vérifié en conditions réelles
+(Playwright) : badge visible sur Login (rouge si backend injoignable),
+disparu de l'écran post-connexion.
+
+Décision backend en discussion (hors scope de ce repo, mais notée ici pour
+contexte) : le backend husk-backend combine FastAPI + PocketBase. Option
+retenue pour préserver le contrat frontend actuel (`POST /auth/login` →
+`{token}` sur une seule origine) : FastAPI fait proxy vers l'API PocketBase
+en interne, plutôt que le frontend parle directement à PocketBase. Rien à
+changer ici tant que husk-backend expose cette route.
