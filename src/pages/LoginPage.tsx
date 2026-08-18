@@ -19,6 +19,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { ApiStatusBadge } from "@/components/ApiStatusBadge";
 import { useLogin } from "@/hooks/useLogin";
 
 const loginSchema = z.object({
@@ -51,6 +52,9 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
           <CardDescription>
             Entrez vos identifiants pour accéder à vos sessions.
           </CardDescription>
+          <div className="pt-2">
+            <ApiStatusBadge />
+          </div>
         </CardHeader>
         <CardContent>
           <Form {...form}>
