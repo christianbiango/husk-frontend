@@ -14,14 +14,22 @@ function AuthenticatedPlaceholder({ onLogout }: { onLogout: () => void }) {
         Les écrans suivants (nouvelle session, flashcards, historique...)
         restent à construire.
       </p>
-      <p className="text-muted-foreground text-xs">
-        Statut backend (/health) :{" "}
+      <span
+        className={
+          "rounded-full border px-3 py-1 text-xs font-medium " +
+          (health.isLoading
+            ? "border-border bg-muted text-muted-foreground"
+            : health.isError
+              ? "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-400"
+              : "border-green-200 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-950 dark:text-green-400")
+        }
+      >
         {health.isLoading
-          ? "vérification..."
+          ? "Vérification de l'API..."
           : health.isError
-            ? "injoignable (normal, pas de backend réel dans ce repo)"
-            : health.data?.status}
-      </p>
+            ? "API injoignable"
+            : "Connecté à l'API"}
+      </span>
       <button
         type="button"
         className="text-sm underline"
