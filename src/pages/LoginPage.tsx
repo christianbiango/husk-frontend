@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { Navigate, useNavigate } from "react-router-dom";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { ApiStatusBadge } from "@/components/ApiStatusBadge";
 import { useLogin } from "@/hooks/useLogin";
+import { getStoredToken } from "@/lib/http";
 
 const loginSchema = z.object({
   email: z.string().min(1, "L'email est requis.").email("Email invalide."),
@@ -29,19 +31,22 @@ const loginSchema = z.object({
 
 type LoginValues = z.infer<typeof loginSchema>;
 
-interface LoginPageProps {
-  onLoginSuccess: () => void;
-}
-
-export function LoginPage({ onLoginSuccess }: LoginPageProps) {
+export function LoginPage() {
+  const navigate = useNavigate();
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
   });
   const loginMutation = useLogin();
 
+  if (getStoredToken()) {
+    return <Navigate to="/home" replace />;
+  }
+
   function onSubmit(values: LoginValues) {
-    loginMutation.mutate(values, { onSuccess: onLoginSuccess });
+    loginMutation.mutate(values, {
+      onSuccess: () => navigate("/home", { replace: true }),
+    });
   }
 
   return (

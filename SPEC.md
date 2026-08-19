@@ -24,7 +24,7 @@ Ce repo est **agnostique du backend** — il ne sait pas comment le backend est 
 ## Contrat de données attendu (à respecter dans la couche mock)
 
 ```typescript
-type TypeSource = "youtube" | "article" | "notion_libre";
+type SourceType = "youtube" | "article" | "free_question";
 
 interface Message {
   role: "user" | "assistant";
@@ -34,20 +34,20 @@ interface Message {
 
 interface Flashcard {
   question: string;
-  reponse: string;
+  answer: string;
 }
 
 interface Session {
   id: string;
-  type_source: TypeSource;
-  source_url: string | null;
-  titre: string;
-  historique: Message[];
+  sourceType: SourceType;
+  sourceUrl: string | null;
+  title: string;
+  history: Message[];
   flashcards: Flashcard[];
   created: string;   // ISO 8601, champ auto de PocketBase
   updated: string;   // ISO 8601, champ auto de PocketBase
-  date_export: string | null;
-  exporte: boolean;
+  exportedAt: string | null;
+  exported: boolean;
 }
 ```
 
@@ -65,7 +65,7 @@ Toutes les interactions avec des données passent par `src/lib/api.ts`, qui pour
 function login(email: string, password: string): Promise<{ token: string }>
 function getSessions(): Promise<Session[]>
 function getSession(id: string): Promise<Session>
-function createSession(type_source: TypeSource, contenu: string): Promise<Session>
+function createSession(sourceType: SourceType, content: string): Promise<Session>
 function sendMessage(sessionId: string, message: string): Promise<Message>
 function generateFlashcards(sessionId: string): Promise<Flashcard[]>
 function updateFlashcards(sessionId: string, flashcards: Flashcard[]): Promise<void>

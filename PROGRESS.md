@@ -79,3 +79,33 @@ retenue pour préserver le contrat frontend actuel (`POST /auth/login` →
 `{token}` sur une seule origine) : FastAPI fait proxy vers l'API PocketBase
 en interne, plutôt que le frontend parle directement à PocketBase. Rien à
 changer ici tant que husk-backend expose cette route.
+
+## 2026-08-19 — Routing (login → /home) + nomenclature anglaise
+
+**Fait :**
+- Ajout de `react-router-dom`. `App.tsx` bascule sur de vraies routes
+  (`/login` publique, `/home` protégée via `RequireAuth`) au lieu du
+  `useState` Login ↔ placeholder. Connexion réussie redirige vers `/home` ;
+  visiter `/login` déjà connecté redirige vers `/home` ; visiter `/home`
+  sans token redirige vers `/login`. Vérifié en conditions réelles
+  (Playwright).
+- Nouvelle règle permanente (voir `CLAUDE.md`) : nomenclature du code en
+  anglais (fonctions, fichiers, variables, types, champs d'interface).
+  Le texte affiché à l'utilisateur et la prose des `.md`/commentaires
+  restent en français.
+- Appliqué cette règle à tout le contrat de données, y compris les champs
+  qui reflètent le futur schéma PocketBase (décision explicite : le
+  backend devra suivre cette nomenclature anglaise, pas l'inverse) :
+  `TypeSource`→`SourceType`, `type_source`→`sourceType`,
+  `source_url`→`sourceUrl`, `titre`→`title`, `historique`→`history`,
+  `reponse`→`answer`, `date_export`→`exportedAt`, `exporte`→`exported`,
+  valeur `"notion_libre"`→`"free_question"`, paramètre `contenu`→`content`.
+  `SPEC.md` mis à jour en conséquence.
+- Renommé `AccueilPage.tsx`/`AccueilPage` → `HomePage.tsx`/`HomePage`,
+  route `/accueil` → `/home`.
+
+**Points en suspens :**
+- Le vrai schéma PocketBase n'existe pas encore côté backend — à faire
+  correspondre à cette nomenclature anglaise quand il sera créé.
+- Écrans restants de SPEC.md toujours non construits (nouvelle session,
+  session en cours, aperçu flashcards, liste des sessions passées).

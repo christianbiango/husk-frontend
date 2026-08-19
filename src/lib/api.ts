@@ -3,7 +3,7 @@
 // Le jour où le vrai backend est prêt, seul ce fichier change (vrais appels fetch/axios),
 // pas les écrans qui le consomment.
 
-export type TypeSource = "youtube" | "article" | "notion_libre";
+export type SourceType = "youtube" | "article" | "free_question";
 
 export interface Message {
   role: "user" | "assistant";
@@ -13,20 +13,20 @@ export interface Message {
 
 export interface Flashcard {
   question: string;
-  reponse: string;
+  answer: string;
 }
 
 export interface Session {
   id: string;
-  type_source: TypeSource;
-  source_url: string | null;
-  titre: string;
-  historique: Message[];
+  sourceType: SourceType;
+  sourceUrl: string | null;
+  title: string;
+  history: Message[];
   flashcards: Flashcard[];
   created: string; // ISO 8601, champ auto de PocketBase
   updated: string; // ISO 8601, champ auto de PocketBase
-  date_export: string | null;
-  exporte: boolean;
+  exportedAt: string | null;
+  exported: boolean;
 }
 
 const MOCK_DELAY_MS = 400;
@@ -42,10 +42,10 @@ function generateId(): string {
 let sessions: Session[] = [
   {
     id: "sess_1a2b3c",
-    type_source: "youtube",
-    source_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-    titre: "Les bases de la thermodynamique",
-    historique: [
+    sourceType: "youtube",
+    sourceUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    title: "Les bases de la thermodynamique",
+    history: [
       {
         role: "user",
         content: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
@@ -72,26 +72,26 @@ let sessions: Session[] = [
     flashcards: [
       {
         question: "Que dit le premier principe de la thermodynamique ?",
-        reponse:
+        answer:
           "L'énergie totale d'un système isolé se conserve : elle ne peut être ni créée ni détruite, seulement transformée.",
       },
       {
         question: "Qu'est-ce que l'entropie ?",
-        reponse:
+        answer:
           "Une grandeur qui mesure le désordre d'un système ; elle croît toujours dans un système isolé (2e principe).",
       },
     ],
     created: "2026-08-10T09:12:00.000Z",
     updated: "2026-08-10T09:14:36.000Z",
-    date_export: null,
-    exporte: false,
+    exportedAt: null,
+    exported: false,
   },
   {
     id: "sess_4d5e6f",
-    type_source: "article",
-    source_url: "https://example.com/articles/histoire-du-web",
-    titre: "Histoire du World Wide Web",
-    historique: [
+    sourceType: "article",
+    sourceUrl: "https://example.com/articles/histoire-du-web",
+    title: "Histoire du World Wide Web",
+    history: [
       {
         role: "user",
         content: "https://example.com/articles/histoire-du-web",
@@ -107,24 +107,24 @@ let sessions: Session[] = [
     flashcards: [
       {
         question: "Qui a inventé le World Wide Web ?",
-        reponse: "Tim Berners-Lee, en 1989, au CERN.",
+        answer: "Tim Berners-Lee, en 1989, au CERN.",
       },
       {
         question: "Quel est le premier navigateur web grand public ?",
-        reponse: "Mosaic, sorti en 1993.",
+        answer: "Mosaic, sorti en 1993.",
       },
     ],
     created: "2026-08-05T14:00:00.000Z",
     updated: "2026-08-05T14:00:05.000Z",
-    date_export: "2026-08-06T08:30:00.000Z",
-    exporte: true,
+    exportedAt: "2026-08-06T08:30:00.000Z",
+    exported: true,
   },
   {
     id: "sess_7g8h9i",
-    type_source: "notion_libre",
-    source_url: null,
-    titre: "Quelle est la différence entre TCP et UDP ?",
-    historique: [
+    sourceType: "free_question",
+    sourceUrl: null,
+    title: "Quelle est la différence entre TCP et UDP ?",
+    history: [
       {
         role: "user",
         content: "Quelle est la différence entre TCP et UDP ?",
@@ -140,8 +140,8 @@ let sessions: Session[] = [
     flashcards: [],
     created: "2026-08-15T18:20:00.000Z",
     updated: "2026-08-15T18:20:03.000Z",
-    date_export: null,
-    exporte: false,
+    exportedAt: null,
+    exported: false,
   },
 ];
 
@@ -172,20 +172,20 @@ export function getSession(id: string): Promise<Session> {
 }
 
 export function createSession(
-  type_source: TypeSource,
-  contenu: string
+  sourceType: SourceType,
+  content: string
 ): Promise<Session> {
   const now = new Date().toISOString();
-  const isUrl = type_source === "youtube" || type_source === "article";
+  const isUrl = sourceType === "youtube" || sourceType === "article";
   const session: Session = {
     id: `sess_${generateId()}`,
-    type_source,
-    source_url: isUrl ? contenu : null,
-    titre: isUrl ? "Nouvelle session" : contenu,
-    historique: [
+    sourceType,
+    sourceUrl: isUrl ? content : null,
+    title: isUrl ? "Nouvelle session" : content,
+    history: [
       {
         role: "user",
-        content: contenu,
+        content,
         timestamp: now,
       },
       {
@@ -198,8 +198,8 @@ export function createSession(
     flashcards: [],
     created: now,
     updated: now,
-    date_export: null,
-    exporte: false,
+    exportedAt: null,
+    exported: false,
   };
   sessions = [session, ...sessions];
   return delay(session);
@@ -220,7 +220,7 @@ export function sendMessage(
     content: `Réponse fictive à : « ${message} » (mock).`,
     timestamp: new Date(Date.now() + 500).toISOString(),
   };
-  session.historique = [...session.historique, userMessage, assistantMessage];
+  session.history = [...session.history, userMessage, assistantMessage];
   session.updated = assistantMessage.timestamp;
   return delay(assistantMessage);
 }
@@ -232,12 +232,12 @@ export function generateFlashcards(sessionId: string): Promise<Flashcard[]> {
   }
   const flashcards: Flashcard[] = [
     {
-      question: `Question générée automatiquement sur « ${session.titre} » ?`,
-      reponse: "Réponse fictive générée par le mock.",
+      question: `Question générée automatiquement sur « ${session.title} » ?`,
+      answer: "Réponse fictive générée par le mock.",
     },
     {
       question: "Deuxième question fictive ?",
-      reponse: "Deuxième réponse fictive.",
+      answer: "Deuxième réponse fictive.",
     },
   ];
   session.flashcards = flashcards;
@@ -263,7 +263,7 @@ export function exportSession(sessionId: string): Promise<void> {
   if (!session) {
     return Promise.reject(new Error(`Session ${sessionId} introuvable.`));
   }
-  session.exporte = true;
-  session.date_export = new Date().toISOString();
+  session.exported = true;
+  session.exportedAt = new Date().toISOString();
   return delay(undefined);
 }

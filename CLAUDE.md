@@ -14,3 +14,7 @@ Ce repo n'a et n'aura jamais accès à un vrai backend. Toute donnée vient de `
 ## Règle permanente — suivi d'avancement
 
 Après chaque commit, mets à jour `PROGRESS.md` (journal libre, pas de checklist pré-remplie) : ce qui a été fait, les décisions prises, les points en suspens.
+
+## Règle permanente — nomenclature du code en anglais
+
+Toute la nomenclature du code (noms de fonctions, fichiers, variables, types, champs d'interface...) doit être en anglais, y compris le contrat de données de `SPEC.md` (`Session`, `Message`, `Flashcard`...) même si celui-ci reflète le futur schéma PocketBase — le schéma backend devra suivre cette nomenclature anglaise, pas l'inverse. Le texte affiché à l'utilisateur (labels, boutons, messages) et la prose des fichiers `.md` (SPEC.md, PROGRESS.md, CLAUDE.md, commentaires de code) restent en français.
