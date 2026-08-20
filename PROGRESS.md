@@ -109,3 +109,98 @@ changer ici tant que husk-backend expose cette route.
   correspondre à cette nomenclature anglaise quand il sera créé.
 - Écrans restants de SPEC.md toujours non construits (nouvelle session,
   session en cours, aperçu flashcards, liste des sessions passées).
+
+## 2026-08-20 — Écran "Nouvelle session" + premier vrai passage design
+
+**Fait :**
+- Nouvelle règle précisée (voir `CLAUDE.md`) : les slugs d'URL restent en
+  français (contrairement au code, en anglais). Correction des routes
+  posées la veille par erreur en anglais : `/home` → `/accueil`,
+  `/login` → `/connexion` (fichiers/composants `HomePage`/`LoginPage`
+  inchangés, seuls les slugs changent).
+- Premier vrai passage design (skill `frontend-design`), construit autour
+  du concept Husk (enveloppe) / Kernel (le grain qu'on en extrait) :
+  palette ambre chaude sur tokens CSS globaux (`index.css` — remplace le
+  gris shadcn par défaut, hérité par Login/Accueil aussi), police
+  d'affichage Fraunces branchée sur le token `--font-heading` existant
+  (donc tous les `CardTitle` en héritent automatiquement).
+- Écran **Nouvelle session** (`/nouvelle-session`, `NewSessionPage.tsx`) :
+  sélecteur de type de source en ToggleGroup "chips" avec icônes lucide
+  (signature visuelle : chip actif rempli en ambre), textarea avec
+  label/placeholder dynamiques selon le type choisi, validation Zod
+  (contenu requis, URL valide si YouTube/Article), branché sur
+  `createSession()` via le nouveau hook `useCreateSession`.
+- Piège rencontré : le style "actif" par défaut des `ToggleGroupItem`
+  shadcn (preset base-nova/Base UI) cible `data-[state=on]:` **et**
+  `aria-pressed:`, mais Base UI ne pose que `aria-pressed="true"` (pas
+  d'attribut `data-state`) — mon override initial en
+  `data-[state=on]:bg-primary` ne faisait donc rien ; il fallait cibler
+  `aria-pressed:` (avec `!` pour forcer la priorité sur le
+  `aria-pressed:bg-muted` déjà présent dans les classes de base du
+  composant). À garder en tête pour tout futur `Toggle`/`ToggleGroup`.
+- Ajout de deux composants shadcn : `toggle.tsx`/`toggle-group.tsx`
+  (récupérés pleins via le CLI, pas de stub vide cette fois — Base UI a
+  de vraies primitives pour ceux-là) et `textarea.tsx` (écrit à la main,
+  pas de primitive `Textarea` dans `@base-ui/react`).
+- Page de résultat minimale **`/session/:id`** (`SessionPage.tsx`,
+  hook `useSession`) : titre, badge type de source, résumé généré
+  (premier message assistant) — en attendant le vrai écran "Session en
+  cours" (chat), qui reste un chantier séparé.
+- Accueil (`/accueil`) : ajout d'un bouton "Nouvelle session" (vrai
+  composant `Button`, plus de cul-de-sac après connexion).
+- Vérifié en conditions réelles (Playwright + captures d'écran) :
+  parcours complet connexion → accueil → nouvelle session → validation
+  (champ vide, URL invalide) → soumission → page de résultat ; rendu
+  visuel de la palette ambre et de Fraunces conforme à la direction
+  choisie.
+
+**Points en suspens :**
+- Écran "Session en cours" complet (chat de raffinement, génération de
+  flashcards) toujours à construire — `/session/:id` n'est qu'un
+  résultat minimal en attendant.
+- Aperçu des flashcards et liste des sessions passées (SPEC.md) non
+  construits.
+- `.dark` a reçu une teinte ambre analogue par cohérence, mais aucun
+  sélecteur de thème n'existe encore dans l'app pour l'activer/tester
+  en usage réel.
+- Un `console.log` de debug reste présent dans `ApiStatusBadge.tsx`
+  (ajouté hors de ce travail, probablement via l'IDE) — non committé,
+  à traiter séparément.
+
+## 2026-08-20 — Atterrissage direct sur Nouvelle session + mobile first
+
+**Fait :**
+- Nouvelle règle permanente (voir `CLAUDE.md`) : le design doit être
+  pensé mobile-first (classes Tailwind sans préfixe = mobile par
+  défaut, `sm:`/`md:`/`lg:` ajoutent la complexité desktop, jamais
+  l'inverse), avec des cibles tactiles d'au moins ~44px sur les
+  éléments interactifs importants, et un ancrage en haut (pas de
+  centrage vertical) sur les pages à formulaire tant qu'on est sur
+  mobile — évite que le clavier virtuel fasse sauter la mise en page.
+- Suppression de l'écran Accueil (`HomePage.tsx`, route `/accueil`) :
+  il ne servait plus qu'à afficher un bouton "Nouvelle session" et la
+  déconnexion, ce qui imposait un clic superflu après la connexion.
+  Login redirige maintenant directement vers `/nouvelle-session`
+  (idem pour `/` et les routes inconnues).
+- Nouveau composant `AuthenticatedLayout.tsx` : combine `RequireAuth`
+  et un header partagé ("Husk" + bouton de déconnexion) entre tous les
+  écrans connectés, pour ne pas dupliquer la déconnexion sur chaque
+  page. `NewSessionPage`/`SessionPage` n'ont plus leur propre wrapper
+  de page ni de lien "retour" — le header s'en charge.
+- Passage mobile-first de l'écran Nouvelle session : le ToggleGroup de
+  type de source s'empile en pleine largeur sur mobile (au lieu de
+  chips compressées côte à côte) et repasse en ligne compacte à partir
+  de `sm:` ; chips et bouton "Générer" à 44px de haut sur mobile
+  (36px à partir de `sm:`) ; bouton "Générer" pleine largeur sur
+  mobile. Même traitement (ancrage haut, bouton 44px) appliqué à Login
+  par cohérence.
+- Vérifié en conditions réelles (Playwright, viewports 375×667 et
+  1440×900) : atterrissage direct sur `/nouvelle-session` après login
+  sur mobile et desktop, hauteurs de cibles tactiles mesurées à 44px,
+  rendu visuel conforme sur les deux tailles.
+
+**Points en suspens :**
+- Pas encore de dashboard/liste de sessions passées (SPEC.md) — pour
+  l'instant `/nouvelle-session` est le seul point d'entrée après
+  connexion, ce qui est volontaire mais à revoir quand cet écran
+  existera.

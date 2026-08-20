@@ -7,7 +7,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   const token = getStoredToken();
 
   if (!token) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/connexion" replace />;
   }
 
   return <>{children}</>;

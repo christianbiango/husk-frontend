@@ -40,17 +40,17 @@ export function LoginPage() {
   const loginMutation = useLogin();
 
   if (getStoredToken()) {
-    return <Navigate to="/home" replace />;
+    return <Navigate to="/nouvelle-session" replace />;
   }
 
   function onSubmit(values: LoginValues) {
     loginMutation.mutate(values, {
-      onSuccess: () => navigate("/home", { replace: true }),
+      onSuccess: () => navigate("/nouvelle-session", { replace: true }),
     });
   }
 
   return (
-    <div className="flex min-h-svh items-center justify-center p-4">
+    <div className="flex min-h-svh flex-col items-center p-4 pt-16 sm:justify-center sm:pt-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>Connexion à Husk</CardTitle>
@@ -108,7 +108,11 @@ export function LoginPage() {
                   {loginMutation.error.message}
                 </p>
               )}
-              <Button type="submit" disabled={loginMutation.isPending}>
+              <Button
+                type="submit"
+                disabled={loginMutation.isPending}
+                className="h-11 sm:h-9"
+              >
                 {loginMutation.isPending ? "Connexion..." : "Se connecter"}
               </Button>
             </form>

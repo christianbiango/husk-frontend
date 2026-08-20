@@ -1,23 +1,32 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
-import { RequireAuth } from "@/components/RequireAuth";
-import { HomePage } from "@/pages/HomePage";
+import { AuthenticatedLayout } from "@/components/AuthenticatedLayout";
 import { LoginPage } from "@/pages/LoginPage";
+import { NewSessionPage } from "@/pages/NewSessionPage";
+import { SessionPage } from "@/pages/SessionPage";
 
 function App() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
+      <Route path="/connexion" element={<LoginPage />} />
       <Route
-        path="/home"
+        path="/nouvelle-session"
         element={
-          <RequireAuth>
-            <HomePage />
-          </RequireAuth>
+          <AuthenticatedLayout>
+            <NewSessionPage />
+          </AuthenticatedLayout>
         }
       />
-      <Route path="/" element={<Navigate to="/home" replace />} />
-      <Route path="*" element={<Navigate to="/home" replace />} />
+      <Route
+        path="/session/:id"
+        element={
+          <AuthenticatedLayout>
+            <SessionPage />
+          </AuthenticatedLayout>
+        }
+      />
+      <Route path="/" element={<Navigate to="/nouvelle-session" replace />} />
+      <Route path="*" element={<Navigate to="/nouvelle-session" replace />} />
     </Routes>
   );
 }
