@@ -51,6 +51,10 @@ const sourceTypeConfig: Record<
   },
 };
 
+// Reflète la validation faite côté backend (husk-backend) pour cet endpoint.
+const YOUTUBE_URL_PATTERN =
+  /^https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)[\w-]+/;
+
 const newSessionSchema = z
   .object({
     sourceType: z.enum(SOURCE_TYPES),
@@ -58,6 +62,17 @@ const newSessionSchema = z
   })
   .superRefine((values, ctx) => {
     if (values.sourceType === "free_question") return;
+    if (values.sourceType === "youtube") {
+      if (!YOUTUBE_URL_PATTERN.test(values.content)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["content"],
+          message:
+            "Utilise un lien du type https://www.youtube.com/watch?v=... ou https://youtu.be/...",
+        });
+      }
+      return;
+    }
     if (!z.string().url().safeParse(values.content).success) {
       ctx.addIssue({
         code: "custom",

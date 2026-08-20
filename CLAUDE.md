@@ -5,11 +5,16 @@ Spec complète : voir `SPEC.md` à la racine. La lire avant de démarrer toute i
 ## Stack
 
 - Vite + React (SPA) + shadcn/ui + react-hook-form/Zod
-- Pas de backend accessible depuis ce repo — tout passe par une couche mock (`src/lib/api.ts`), cf. SPEC.md
+- Backend séparé : `husk-backend` (FastAPI + PocketBase), repo voisin (`../husk-backend`). Certains endpoints sont maintenant réels et appelables depuis ce repo (voir liste ci-dessous) ; tout le reste passe encore par la couche mock (`src/lib/api.ts`), cf. SPEC.md.
 
-## Règle permanente — développement contre mock uniquement
+## Règle permanente — mock par défaut, endpoints réels documentés en exception
 
-Ce repo n'a et n'aura jamais accès à un vrai backend. Toute donnée vient de `src/lib/api.ts`, qui simule les appels réels en respectant le contrat de données défini dans `SPEC.md`. Ne jamais essayer de deviner ou d'appeler une vraie URL de backend — si une fonctionnalité semble nécessiter un vrai serveur (auth réelle, appel Gemini...), simule-la dans la couche mock avec des données plausibles, sans bloquer sur son absence.
+Par défaut, ce repo développe contre la couche mock (`src/lib/api.ts`) en respectant le contrat de données défini dans `SPEC.md` — ne jamais deviner ou appeler une URL de backend qui n'est pas explicitement confirmée. Certains endpoints de `husk-backend` sont cependant réels, stables, et approuvés pour un appel direct depuis ce repo (via `src/lib/http.ts`, base URL `VITE_API_URL`) :
+
+- `GET /health` — vérification de disponibilité de l'API (déjà en place).
+- `POST /test/summarize-youtube` — résumé Gemini d'une vidéo YouTube (contrat exact vérifié dans le code de `husk-backend`, pas deviné).
+
+Avant d'ajouter un nouvel appel réel à cette liste : vérifier le contrat exact (route, méthode, schéma requête/réponse, auth) directement dans le code de `../husk-backend`, jamais en le devinant. Documenter le nouvel endpoint ici une fois confirmé.
 
 ## Règle permanente — suivi d'avancement
 

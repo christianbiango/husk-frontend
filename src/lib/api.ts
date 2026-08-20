@@ -171,9 +171,13 @@ export function getSession(id: string): Promise<Session> {
   return delay(found);
 }
 
+// summaryOverride permet d'injecter un vrai résumé Gemini (voir
+// src/hooks/useCreateSession.ts + src/lib/gemini.ts) sans que ce fichier
+// fasse lui-même d'appel réseau.
 export function createSession(
   sourceType: SourceType,
-  content: string
+  content: string,
+  summaryOverride?: string
 ): Promise<Session> {
   const now = new Date().toISOString();
   const isUrl = sourceType === "youtube" || sourceType === "article";
@@ -191,6 +195,7 @@ export function createSession(
       {
         role: "assistant",
         content:
+          summaryOverride ??
           "Voici un résumé généré automatiquement à partir de votre source. (Contenu fictif — mock.)",
         timestamp: now,
       },

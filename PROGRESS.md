@@ -204,3 +204,45 @@ changer ici tant que husk-backend expose cette route.
   l'instant `/nouvelle-session` est le seul point d'entrée après
   connexion, ce qui est volontaire mais à revoir quand cet écran
   existera.
+
+## 2026-08-20 — Premier vrai appel réseau métier : résumé YouTube (Gemini)
+
+**Fait :**
+- `CLAUDE.md` : la règle "mock uniquement" devient "mock par défaut,
+  endpoints réels documentés en exception" — liste explicite des
+  endpoints réels approuvés (`/health`, `/test/summarize-youtube`),
+  à mettre à jour à chaque nouvel appel réel ajouté.
+- Contrat vérifié directement dans le code de `../husk-backend` (pas
+  deviné) : `POST /test/summarize-youtube`, body `{ url }`, réponse
+  `{ summary }` (erreurs `{ detail }` en 400/401/502), nécessite un
+  vrai token PocketBase (`Authorization: Bearer ...`).
+- `src/lib/gemini.ts` (nouveau) : appel réel via le client axios
+  existant (`src/lib/http.ts`). `src/lib/api.ts` reste 100% mock mais
+  `createSession()` accepte désormais un `summaryOverride` optionnel
+  pour recevoir un vrai résumé sans faire lui-même d'appel réseau.
+- `useCreateSession` orchestre : appelle `summarizeYoutube()` en vrai
+  quand `sourceType === "youtube"`, garde le mock pour
+  article/question libre ; remonte le message d'erreur exact du
+  backend (`error.response.data.detail`) plutôt qu'un message Axios
+  générique.
+- Validation Zod de l'URL YouTube resserrée pour matcher exactement le
+  regex du backend (feedback immédiat côté client avant tout appel
+  réseau).
+- Vérifié en conditions réelles (Playwright, avec le vrai backend
+  tournant en local sur :8000) : la requête part avec le bon corps et
+  le bon header d'auth, le mock (question libre) n'est pas cassé, et
+  le message d'erreur backend ("Invalid or expired token") s'affiche
+  correctement dans l'UI.
+
+**Point bloquant important :**
+- Le login de ce repo reste entièrement mocké (`login()` génère un
+  faux token `mock_token_...`). Cet endpoint réel exige un vrai token
+  PocketBase — donc en l'état, cliquer "Générer" sur une session
+  YouTube échouera toujours en 401 tant que le vrai login (ou une
+  autre méthode d'obtention d'un vrai token) n'est pas branché. C'est
+  la prochaine dépendance à lever pour tester ce flow de bout en bout.
+- `VITE_API_URL` doit pointer vers `http://localhost:8000` en local
+  (port confirmé dans `../husk-backend`) ; le `.env` local du repo est
+  déjà configuré ainsi (confirmé indirectement via le badge de statut
+  API, pas relu directement — fichiers `.env*` bloqués en lecture/
+  écriture pour Claude Code).

@@ -1,6 +1,7 @@
 // Client HTTP réel (axios) — distinct de src/lib/api.ts qui est la couche mock.
-// Sert aux appels qui doivent effectivement toucher le réseau (ex. /health),
-// pas aux écrans métier (Login, sessions, flashcards...) qui restent branchés sur le mock.
+// Sert aux appels qui doivent effectivement toucher le réseau (/health,
+// src/lib/gemini.ts). La liste des endpoints réels approuvés est documentée
+// dans CLAUDE.md — tout le reste des écrans métier reste branché sur le mock.
 
 import axios from "axios";
 
