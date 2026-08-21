@@ -19,8 +19,12 @@ export function setStoredToken(token: string | null): void {
   }
 }
 
+// husk-backend préfixe désormais toutes ses routes par /api — préfixe fixe
+// de l'application (ne varie pas selon l'environnement), donc géré ici
+// plutôt que dans VITE_API_URL (qui reste juste l'origine, ex.
+// http://localhost:8000).
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: `${import.meta.env.VITE_API_URL}/api`,
 });
 
 axiosInstance.interceptors.request.use((config) => {

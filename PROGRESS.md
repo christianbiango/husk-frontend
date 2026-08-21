@@ -435,3 +435,13 @@ un sélecteur à 3 choix dont 2 ne mènent nulle part n'a pas de sens.
 - Pas de route DELETE : une session créée puis dont l'appel `/message`
   échoue reste orpheline dans PocketBase.
 - `getSessions()` réel existe mais toujours non consommé par un écran.
+
+## 2026-08-21 — Préfixe /api sur toutes les routes backend
+
+husk-backend préfixe désormais toutes ses routes par `/api` (ex.
+`/api/health`, `/api/auth/login`). Choix : géré dans le code
+(`src/lib/http.ts`, `baseURL: `${VITE_API_URL}/api``) plutôt que dans
+`VITE_API_URL` — c'est un détail de routage fixe de l'application, pas
+quelque chose qui varie par environnement ; `VITE_API_URL` reste juste
+l'origine (`http://localhost:8000`), aucun `.env` à modifier. Vérifié en
+conditions réelles : les requêtes partent bien vers `/api/...`.
