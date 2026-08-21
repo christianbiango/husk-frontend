@@ -10,5 +10,6 @@ export function useSession(id: string) {
     queryKey: ["session", id],
     queryFn: () =>
       id.startsWith("sess_") ? getMockSession(id) : getRealSession(id),
+    retry: false,
   });
 }

@@ -57,7 +57,8 @@ export function NewSessionPage() {
   }
 
   return (
-    <div className="w-full max-w-xl">
+    <div className="flex flex-1 flex-col items-center p-4 sm:justify-center">
+      <div className="w-full max-w-xl">
       <Card>
         <CardHeader>
           <CardTitle className="text-display-lg">Nouvelle session</CardTitle>
@@ -120,6 +121,7 @@ export function NewSessionPage() {
           </Form>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

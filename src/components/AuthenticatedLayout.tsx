@@ -36,9 +36,7 @@ export function AuthenticatedLayout({ children }: { children: ReactNode }) {
             <LogOut />
           </Button>
         </header>
-        <div className="flex flex-1 flex-col items-center p-4 sm:justify-center">
-          {children}
-        </div>
+        <div className="flex min-h-0 flex-1 flex-col">{children}</div>
       </div>
     </RequireAuth>
   );

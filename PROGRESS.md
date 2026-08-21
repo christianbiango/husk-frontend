@@ -445,3 +445,50 @@ husk-backend préfixe désormais toutes ses routes par `/api` (ex.
 quelque chose qui varie par environnement ; `VITE_API_URL` reste juste
 l'origine (`http://localhost:8000`), aucun `.env` à modifier. Vérifié en
 conditions réelles : les requêtes partent bien vers `/api/...`.
+
+## 2026-08-21 — Refonte de l'écran de conversation (mobile-first, façon app IA)
+
+Retours utilisateur sur captures d'écran : la conversation dans une `Card`
+gaspillait de l'espace sur mobile, les messages n'étaient pas assez
+distingués visuellement, pas de timestamp, le markdown des réponses
+Gemini (gras, listes) s'affichait en texte brut, et le champ de saisie
+était trop petit. Référence donnée : l'app Gemini (dégradé de fond mis à
+part — hors sujet ici, juste la disposition).
+
+**Fait :**
+- `AuthenticatedLayout.tsx` : le conteneur de contenu devient neutre
+  (`flex-1 min-h-0`, plus de padding/centrage forcés) pour que chaque
+  écran gère son propre layout — nécessaire pour une conversation plein
+  écran. `NewSessionPage.tsx` reprend lui-même le centrage/padding qu'il
+  recevait avant du layout parent (pas de régression visuelle sur cet
+  écran).
+- `SessionPage.tsx` entièrement reconstruite en vue de conversation
+  plutôt qu'une `Card` : en-tête compact (icône "nouvelle session" +
+  badge + titre tronqué sur une seule ligne, plus de gros `CardHeader`),
+  liste de messages qui remplit l'espace disponible (`flex-1 overflow-y-
+  auto`), zone de saisie ancrée en bas.
+- Distinction des messages : réponses IA accompagnées du `HuskMark` en
+  guise d'avatar, messages utilisateur en bulle arrondie alignée à
+  droite, espacement généreux entre les tours (`gap-6` au lieu de
+  `gap-3`), timestamp (`HH:mm`) affiché au-dessus de chaque message.
+- **Rendu markdown** : ajout de `react-markdown` (aucune lib markdown
+  n'existait) pour les réponses IA — gras, italique, listes, titres
+  s'affichent correctement au lieu du texte brut avec astérisques
+  littéraux. Stylé à la main via des sélecteurs Tailwind ciblés plutôt
+  que d'ajouter le plugin `@tailwindcss/typography` pour un seul usage.
+- Champ de saisie repensé façon app de chat : pilule arrondie, hauteur
+  généreuse et qui grandit avec le contenu (jusqu'à 160px), bouton rond
+  avec icône flèche (Lucide `ArrowUp`) au lieu d'un bouton texte
+  "Envoyer". Entrée envoie le message, Maj+Entrée insère un retour à la
+  ligne (convention standard des apps de chat).
+- Piège rencontré : le bouton "nouvelle session" du header, rendu comme
+  un `<Link>` via la prop `render` de Base UI (pas `asChild`, convention
+  Radix qui n'existe pas ici), déclenchait un avertissement console
+  ("expected a native <button>") — corrigé avec `nativeButton={false}`.
+- Bug préexistant corrigé au passage : `useSession` n'avait pas
+  `retry: false`, donc une session introuvable mettait ~7s à afficher
+  l'erreur (retries par défaut de react-query) au lieu d'immédiatement.
+- Vérifié en conditions réelles (Playwright, mobile 390px et desktop,
+  en interceptant les routes réelles `/api/sessions*` pour simuler des
+  réponses avec markdown) : rendu conforme sur les deux tailles, Entrée/
+  Maj+Entrée fonctionnent, aucune erreur console.

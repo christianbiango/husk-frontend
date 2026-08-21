@@ -1,16 +1,17 @@
-import { useState, type FormEvent } from "react";
+import {
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type KeyboardEvent,
+} from "react";
+import { ArrowUp, Plus } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import { Link, useParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { HuskMark } from "@/components/HuskMark";
 import { GenerationFailedIllustration } from "@/components/illustrations/GenerationFailedIllustration";
 import { ProcessingIllustration } from "@/components/illustrations/ProcessingIllustration";
 import { useSendMessage } from "@/hooks/useSendMessage";
@@ -36,67 +37,121 @@ function getVisibleHistory(
   return history;
 }
 
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString("fr-FR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+const TEXTAREA_MAX_HEIGHT = 160;
+
+// Styles minimaux pour le markdown des réponses IA (gras, listes, titres...)
+// — pas de dépendance à un plugin Tailwind typography pour un seul usage.
+const MARKDOWN_CLASSES =
+  "[&_p]:mb-3 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_em]:italic " +
+  "[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 " +
+  "[&_h1]:font-heading [&_h1]:text-display-md [&_h1]:mb-2 " +
+  "[&_h2]:font-heading [&_h2]:text-lg [&_h2]:font-medium [&_h2]:mb-2 " +
+  "[&_h3]:font-medium [&_h3]:mb-1 " +
+  "[&_a]:underline [&_code]:bg-muted [&_code]:rounded [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-caption";
+
 export function SessionPage() {
   const { id } = useParams<{ id: string }>();
   const { data: session, isLoading, isError, error } = useSession(id ?? "");
   const sendMessageMutation = useSendMessage(id ?? "");
   const [message, setMessage] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  function resizeTextarea() {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, TEXTAREA_MAX_HEIGHT)}px`;
+  }
+
+  function handleInput(event: ChangeEvent<HTMLTextAreaElement>) {
+    setMessage(event.target.value);
+    resizeTextarea();
+  }
 
   function handleSend(event: FormEvent) {
     event.preventDefault();
     const trimmed = message.trim();
-    if (!trimmed) return;
+    if (!trimmed || sendMessageMutation.isPending) return;
     sendMessageMutation.mutate(trimmed, {
-      onSuccess: () => setMessage(""),
+      onSuccess: () => {
+        setMessage("");
+        requestAnimationFrame(resizeTextarea);
+      },
     });
   }
 
+  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      handleSend(event);
+    }
+  }
+
   return (
-    <div className="flex w-full max-w-xl flex-col gap-4">
-      <Link
-        to="/nouvelle-session"
-        className="text-muted-foreground w-fit text-sm underline"
-      >
-        ← Nouvelle session
-      </Link>
-      <Card>
-        {isLoading && (
-          <CardContent>
-            <p className="text-muted-foreground text-sm">Chargement...</p>
-          </CardContent>
-        )}
-        {isError && (
-          <CardContent>
-            <p className="text-destructive text-sm">{error.message}</p>
-          </CardContent>
-        )}
-        {session && (
-          <>
-            <CardHeader>
-              <span className="bg-accent text-accent-foreground text-caption w-fit rounded-full px-3 py-1 font-medium tracking-[0.02em]">
-                {sourceTypeLabels[session.sourceType]}
-              </span>
-              <CardTitle className="text-display-md">
-                {session.title}
-              </CardTitle>
-              <CardDescription className="text-body">
-                Pose une question de suivi pour affiner le résumé.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
+    <div className="flex min-h-0 flex-1 flex-col">
+      {isLoading && (
+        <p className="text-muted-foreground flex flex-1 items-center justify-center text-sm">
+          Chargement...
+        </p>
+      )}
+      {isError && (
+        <p className="text-destructive flex flex-1 items-center justify-center p-4 text-center text-sm">
+          {error.message}
+        </p>
+      )}
+      {session && (
+        <>
+          <div className="border-border flex items-center gap-2 border-b px-2 py-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0"
+              nativeButton={false}
+              render={<Link to="/nouvelle-session" aria-label="Nouvelle session" />}
+            >
+              <Plus />
+            </Button>
+            <span className="bg-accent text-accent-foreground text-caption shrink-0 rounded-full px-2.5 py-1 font-medium tracking-[0.02em]">
+              {sourceTypeLabels[session.sourceType]}
+            </span>
+            <h1 className="font-heading truncate text-base font-medium">
+              {session.title}
+            </h1>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-4 py-4">
+            <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
               {getVisibleHistory(session.history, session.sourceUrl).map(
-                (item, index) => (
-                  <div
-                    key={index}
-                    className={
-                      item.role === "assistant"
-                        ? "text-body whitespace-pre-wrap"
-                        : "bg-secondary text-secondary-foreground text-body w-fit max-w-[85%] self-end rounded-lg px-3 py-2 whitespace-pre-wrap"
-                    }
-                  >
-                    {item.content}
-                  </div>
-                )
+                (item, index) =>
+                  item.role === "assistant" ? (
+                    <div key={index} className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <HuskMark size={20} />
+                        <span className="text-caption text-muted-foreground">
+                          {formatTime(item.timestamp)}
+                        </span>
+                      </div>
+                      <div className={`text-body ${MARKDOWN_CLASSES}`}>
+                        <ReactMarkdown>{item.content}</ReactMarkdown>
+                      </div>
+                    </div>
+                  ) : (
+                    <div key={index} className="flex flex-col items-end gap-1">
+                      <span className="text-caption text-muted-foreground">
+                        {formatTime(item.timestamp)}
+                      </span>
+                      <div className="bg-secondary text-secondary-foreground text-body max-w-[85%] rounded-2xl px-4 py-2.5 whitespace-pre-wrap">
+                        {item.content}
+                      </div>
+                    </div>
+                  )
               )}
               {sendMessageMutation.isPending && (
                 <div className="flex flex-col items-center gap-1 self-center text-center">
@@ -114,29 +169,37 @@ export function SessionPage() {
                   </p>
                 </div>
               )}
-            </CardContent>
-            <CardFooter>
-              <form onSubmit={handleSend} className="flex w-full gap-2">
-                <Textarea
-                  rows={1}
-                  value={message}
-                  onChange={(event) => setMessage(event.target.value)}
-                  placeholder="Pose une question de suivi..."
-                  disabled={sendMessageMutation.isPending}
-                  className="min-h-11 flex-1 resize-none sm:min-h-9"
-                />
-                <Button
-                  type="submit"
-                  disabled={sendMessageMutation.isPending || !message.trim()}
-                  className="h-11 sm:h-9"
-                >
-                  Envoyer
-                </Button>
-              </form>
-            </CardFooter>
-          </>
-        )}
-      </Card>
+            </div>
+          </div>
+
+          <div className="border-border border-t p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <form
+              onSubmit={handleSend}
+              className="border-input focus-within:border-ring focus-within:ring-ring/50 mx-auto flex w-full max-w-2xl items-end gap-2 rounded-3xl border px-2 py-2 focus-within:ring-3"
+            >
+              <Textarea
+                ref={textareaRef}
+                rows={1}
+                value={message}
+                onChange={handleInput}
+                onKeyDown={handleKeyDown}
+                disabled={sendMessageMutation.isPending}
+                placeholder="Pose une question de suivi..."
+                className="max-h-40 min-h-11 flex-1 resize-none border-0 bg-transparent px-2 py-2 shadow-none focus-visible:border-transparent focus-visible:ring-0"
+              />
+              <Button
+                type="submit"
+                size="icon"
+                disabled={sendMessageMutation.isPending || !message.trim()}
+                className="size-11 shrink-0 rounded-full"
+                aria-label="Envoyer"
+              >
+                <ArrowUp />
+              </Button>
+            </form>
+          </div>
+        </>
+      )}
     </div>
   );
 }
