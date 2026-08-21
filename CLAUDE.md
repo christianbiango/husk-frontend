@@ -5,16 +5,26 @@ Spec complète : voir `SPEC.md` à la racine. La lire avant de démarrer toute i
 ## Stack
 
 - Vite + React (SPA) + shadcn/ui + react-hook-form/Zod
-- Backend séparé : `husk-backend` (FastAPI + PocketBase), repo voisin (`../husk-backend`). Certains endpoints sont maintenant réels et appelables depuis ce repo (voir liste ci-dessous) ; tout le reste passe encore par la couche mock (`src/lib/api.ts`), cf. SPEC.md.
+- Backend séparé : `husk-backend` (FastAPI + PocketBase), repo voisin (`../husk-backend`). La plupart des écrans sont maintenant branchés sur le vrai backend (voir liste ci-dessous) ; ce qui n'a pas d'équivalent backend reste sur la couche mock (`src/lib/api.ts`).
 
-## Règle permanente — mock par défaut, endpoints réels documentés en exception
+⚠️ **Le code "sessions" de `husk-backend` n'est pas commité** au moment d'écrire ceci (`app/routers/sessions.py`, la migration PocketBase des sessions) — il n'existe que dans l'arbre de travail local. Si le backend est redéployé depuis `origin/main` sans commit côté `husk-backend`, tout ce qui suit sur `/sessions` cesse de fonctionner. Vérifier ce point si quelque chose qui marchait en local casse après un déploiement.
 
-Par défaut, ce repo développe contre la couche mock (`src/lib/api.ts`) en respectant le contrat de données défini dans `SPEC.md` — ne jamais deviner ou appeler une URL de backend qui n'est pas explicitement confirmée. Certains endpoints de `husk-backend` sont cependant réels, stables, et approuvés pour un appel direct depuis ce repo (via `src/lib/http.ts`, base URL `VITE_API_URL`) :
+## Règle permanente — réel par défaut, mock documenté en exception
 
-- `GET /health` — vérification de disponibilité de l'API (déjà en place).
-- `POST /test/summarize-youtube` — résumé Gemini d'une vidéo YouTube (contrat exact vérifié dans le code de `husk-backend`, pas deviné).
+Ce repo appelle le vrai backend `husk-backend` pour tout ce qui existe côté API (via `src/lib/http.ts`, base URL `VITE_API_URL`) :
 
-Avant d'ajouter un nouvel appel réel à cette liste : vérifier le contrat exact (route, méthode, schéma requête/réponse, auth) directement dans le code de `../husk-backend`, jamais en le devinant. Documenter le nouvel endpoint ici une fois confirmé.
+- `GET /health` — vérification de disponibilité de l'API.
+- `POST /auth/login` (`src/lib/auth.ts`) — vrai compte PocketBase requis (pas d'inscription publique, compte créé une fois via le dashboard admin PocketBase — app mono-utilisateur).
+- `GET /auth/me` (`src/lib/auth.ts`) — utilisé par `RequireAuth` pour valider le token stocké à l'entrée de toute route protégée. Un 401 sur *n'importe quel* appel réel (pas seulement `/auth/me`) déclenche l'intercepteur global de `src/lib/http.ts` : token nettoyé + redirection dure vers `/connexion` (sauf sur `/auth/login` lui-même, où 401 = mauvais identifiants, pas session expirée).
+- `GET /sessions`, `GET /sessions/{id}`, `POST /sessions`, `POST /sessions/{id}/message` (`src/lib/sessions.ts`) — **le backend stocke les champs en français** (`type_source`, `source_url`, `titre`, `historique`, `date_export`, `exporte`, rôles de message `"user"/"model"`) ; `src/lib/sessions.ts` traduit vers le contrat anglais (`Session`, `Message`) à la frontière réseau, le reste de l'app ne voit jamais le français. Le titre d'une session YouTube est généré par Gemini (JSON `{titre, resume}`) lors du premier appel `/message`, pas fourni par le frontend à la création.
+
+Ce qui reste mocké, faute d'équivalent backend, et pourquoi (`src/lib/api.ts`) :
+
+- `createSession()` pour `sourceType` **`article`/`free_question`** — `POST /sessions` n'accepte aujourd'hui que `type_source: "youtube"`. **Aucune UI ne construit plus ces deux types** (l'écran Nouvelle session ne propose que YouTube) — la fonction mock reste dans `api.ts` au cas où, mais n'est plus appelée nulle part. La création YouTube réelle passe par `createYoutubeSession()` dans `src/lib/sessions.ts`, pas par le mock.
+- `generateFlashcards()`, `updateFlashcards()`, `exportSession()` — aucune route n'existe pour ces trois fonctions dans `husk-backend`, pas d'UI construite non plus (pas d'écran flashcards/export).
+- Conséquence pratique : `useSession`/`useSendMessage` routent vers le mock ou le vrai backend selon que l'id de session est préfixé `sess_` (mock, `src/lib/api.ts`) ou non (id PocketBase réel) — pont volontairement simple pour cette période de transition, à retirer si/quand article/question libre deviennent réels.
+
+Avant d'ajouter un nouvel appel réel ou de lever une exception mock : vérifier le contrat exact (route, méthode, schéma requête/réponse, auth) directement dans le code de `../husk-backend`, jamais en le devinant. Mettre à jour cette liste une fois confirmé.
 
 ## Règle permanente — suivi d'avancement
 

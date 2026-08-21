@@ -1,31 +1,10 @@
 import { useMutation } from "@tanstack/react-query";
-import axios from "axios";
-import { createSession, type SourceType } from "@/lib/api";
-import { summarizeYoutube } from "@/lib/gemini";
+import { createYoutubeSession } from "@/lib/sessions";
 
-interface CreateSessionInput {
-  sourceType: SourceType;
-  content: string;
-}
-
+// Seul YouTube est câblé — Article/Question libre n'ont pas d'UI tant que
+// husk-backend ne les supporte pas (voir CLAUDE.md).
 export function useCreateSession() {
   return useMutation({
-    mutationFn: async ({ sourceType, content }: CreateSessionInput) => {
-      if (sourceType !== "youtube") {
-        return createSession(sourceType, content);
-      }
-      try {
-        const { summary } = await summarizeYoutube(content);
-        return createSession(sourceType, content, summary);
-      } catch (error) {
-        if (
-          axios.isAxiosError(error) &&
-          typeof error.response?.data?.detail === "string"
-        ) {
-          throw new Error(error.response.data.detail);
-        }
-        throw error;
-      }
-    },
+    mutationFn: (url: string) => createYoutubeSession(url),
   });
 }

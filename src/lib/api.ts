@@ -1,7 +1,9 @@
 // Couche mock — voir SPEC.md "La couche mock — principe".
-// Aucun appel réseau réel ici : uniquement des données fictives plausibles.
-// Le jour où le vrai backend est prêt, seul ce fichier change (vrais appels fetch/axios),
-// pas les écrans qui le consomment.
+// Login, sessions YouTube (création + résumé) sont désormais réels : voir
+// src/lib/auth.ts et src/lib/sessions.ts. Ce fichier reste la couche mock
+// pour ce qui n'a pas d'équivalent backend : création de session
+// article/question libre, flashcards, export — voir CLAUDE.md pour le
+// détail de ce qui est réel vs mocké.
 
 export type SourceType = "youtube" | "article" | "free_question";
 
@@ -145,17 +147,6 @@ let sessions: Session[] = [
   },
 ];
 
-export function login(
-  email: string,
-  password: string
-): Promise<{ token: string }> {
-  if (!email || !password) {
-    return Promise.reject(new Error("Email et mot de passe requis."));
-  }
-  const token = `mock_token_${btoa(email)}_${generateId()}`;
-  return delay({ token });
-}
-
 export function getSessions(): Promise<Session[]> {
   const sorted = [...sessions].sort(
     (a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime()
@@ -171,13 +162,12 @@ export function getSession(id: string): Promise<Session> {
   return delay(found);
 }
 
-// summaryOverride permet d'injecter un vrai résumé Gemini (voir
-// src/hooks/useCreateSession.ts + src/lib/gemini.ts) sans que ce fichier
-// fasse lui-même d'appel réseau.
+// Utilisé uniquement pour article/question libre : la création de session
+// YouTube passe par le vrai backend (src/lib/sessions.ts,
+// createYoutubeSession), le backend n'acceptant pas encore ces deux types.
 export function createSession(
   sourceType: SourceType,
-  content: string,
-  summaryOverride?: string
+  content: string
 ): Promise<Session> {
   const now = new Date().toISOString();
   const isUrl = sourceType === "youtube" || sourceType === "article";
@@ -195,7 +185,6 @@ export function createSession(
       {
         role: "assistant",
         content:
-          summaryOverride ??
           "Voici un résumé généré automatiquement à partir de votre source. (Contenu fictif — mock.)",
         timestamp: now,
       },

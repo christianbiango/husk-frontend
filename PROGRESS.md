@@ -295,3 +295,143 @@ ils existent déjà en code et une maquette statique séparée aurait créé
 une deuxième source de vérité. Les icônes d'interface (chips Nouvelle
 session) restent Lucide, pas un set custom.
 
+## 2026-08-20 — Login réel + sessions YouTube réelles
+
+Déclenché par un 401 sur le bouton "Générer" : `login()` mocké générait un
+faux token, incompatible avec `/test/summarize-youtube` qui exige un vrai
+token PocketBase. Décision : basculer login + sessions YouTube sur le vrai
+backend plutôt que patcher le mock.
+
+**Audit préalable de `../husk-backend`** (avant tout code, pour ne rien
+deviner) :
+- Le code "sessions" (`app/routers/sessions.py`, migration PocketBase) est
+  **non commité** côté husk-backend — n'existe que dans l'arbre de travail
+  local. Risque à surveiller si le backend est redéployé sans commit.
+- `POST /test/summarize-youtube` a été **supprimé** (remplacé par
+  `POST /sessions/{id}/message`) — notre `src/lib/gemini.ts` de la veille
+  appelait donc une route qui n'existe plus.
+- Contrat réel très différent du nôtre : champs PocketBase en **français**
+  (`type_source`, `source_url`, `titre`, `historique`, `date_export`,
+  `exporte`), `POST /sessions` n'accepte que `type_source: "youtube"`,
+  `GET /sessions` renvoie l'enveloppe paginée brute PocketBase, les rôles
+  de message sont `"user"/"model"` (Gemini natif) pas `"user"/"assistant"`.
+  Aucune route pour flashcards ni export.
+- Aucun utilisateur de test documenté dans le repo (pas de seed, pas
+  d'inscription publique — décision produit : compte créé une fois à la
+  main via le dashboard admin PocketBase). L'utilisateur confirme avoir
+  déjà un compte super admin et un compte user.
+
+**Décision produit** (tranchée avec l'utilisateur) : YouTube passe
+entièrement en réel ; Article et Question libre **restent mockés**, faute
+de support backend — pas un choix esthétique, l'API ne les accepte
+simplement pas encore.
+
+**Fait :**
+- `src/lib/auth.ts` (nouveau, réel) : `login()` appelle `POST /auth/login`
+  (proxy FastAPI → PocketBase `auth-with-password`). Remplace le
+  `login()` mocké, supprimé de `src/lib/api.ts`.
+- `src/lib/sessions.ts` (nouveau, réel) : `getSessions`, `getSession`,
+  `createYoutubeSession`. Traduit les champs français du backend vers le
+  contrat anglais (`Session`, `Message`, rôle `model`→`assistant`) à la
+  frontière réseau — le reste de l'app ne voit jamais le français.
+  `createYoutubeSession` orchestre les deux appels réels nécessaires :
+  `POST /sessions` (crée la session vide) puis `POST /sessions/{id}/message`
+  avec un corps vide (le backend utilise son instruction par défaut
+  "Fais un résumé structuré de cette vidéo." et récupère la vidéo via
+  `source_url` déjà stocké) pour obtenir le vrai résumé Gemini.
+- `src/lib/http.ts` : nouveau helper `getApiErrorMessage()` (extraction du
+  `detail` FastAPI), factorisé depuis la logique ajoutée hier dans
+  `useCreateSession` — réutilisé par `useLogin` et `src/lib/sessions.ts`.
+- `src/hooks/useSession.ts` : route vers le mock ou le vrai backend selon
+  le préfixe de l'id (`sess_` = mock, sinon id PocketBase réel) — pont
+  volontairement simple pour la période de transition hybride.
+- `src/lib/gemini.ts` supprimé (route backend disparue).
+- `CLAUDE.md` réécrit : "réel par défaut, mock documenté en exception"
+  (inversion de la règle précédente), avec la liste exacte de ce qui est
+  réel, ce qui reste mocké et pourquoi, et l'avertissement sur le code
+  backend non commité.
+- Vérifié : requête `/auth/login` correctement formée, message d'erreur
+  réel du backend affiché ("Invalid credentials") sur identifiants
+  invalides ; chemin mocké (question libre) toujours fonctionnel via le
+  routage par préfixe d'id. **Non vérifié : le succès du vrai login et de
+  la création de session YouTube de bout en bout** — nécessite les vrais
+  identifiants PocketBase de l'utilisateur, que je n'ai pas et ne dois pas
+  avoir ; à tester manuellement.
+
+**Limitations connues (documentées dans `CLAUDE.md`) :**
+- Pas de route pour renommer une session : le titre d'une session YouTube
+  reste "Nouvelle session" en permanence, faute de génération de titre
+  côté backend.
+- Pas de route DELETE : si `POST /sessions` réussit mais que l'appel
+  `/message` échoue (ex. Gemini indisponible), la session vide créée
+  reste orpheline dans PocketBase — rien côté frontend ne peut la
+  nettoyer.
+- `getSessions()` réel existe mais n'est encore appelé par aucun écran
+  (pas de liste de sessions construite) — non testé en pratique.
+
+## 2026-08-21 — Validation de session au chargement + redirection globale sur 401
+
+Le backend a évolué depuis hier (`GET /auth/me` maintenant réel) ; l'utilisateur
+a fourni un mini-cahier des charges précis pour la suite. Première partie :
+robustesse de l'auth.
+
+**Fait :**
+- `src/lib/auth.ts` : `getCurrentUser()` appelle `GET /auth/me`.
+- `RequireAuth.tsx` : valide le token stocké via `/auth/me` à l'entrée de
+  toute route protégée (au lieu de vérifier juste sa présence). Affiche un
+  état "Vérification de la session..." pendant la requête.
+- `src/lib/http.ts` : intercepteur de réponse global — tout 401 (sauf sur
+  `/auth/login`) nettoie le token et fait une redirection dure vers
+  `/connexion`. Couvre aussi bien `/auth/me` que n'importe quel appel réel
+  futur dont le token deviendrait invalide en cours de session.
+- `AuthenticatedLayout.tsx` : la déconnexion invalide aussi le cache
+  react-query de `/auth/me` (évite de resservir de vieilles données au
+  prochain login).
+- Vérifié en conditions réelles (Playwright) : token invalide → `/auth/me`
+  appelé → 401 → token nettoyé + redirection ; pas de token du tout →
+  redirection immédiate sans appel réseau superflu.
+
+## 2026-08-21 — Vraie conversation (affichage + affinage)
+
+**Fait :**
+- `src/lib/sessions.ts` : le titre n'est plus envoyé en dur à la création
+  (le backend le génère désormais via Gemini au premier appel `/message` et
+  l'enregistre lui-même) ; nouvelle fonction `sendMessage()` réelle pour
+  l'affinage, factorisée avec `createYoutubeSession()` via un helper interne
+  `postMessage()`.
+- `src/hooks/useSendMessage.ts` (nouveau) : mutation d'envoi de message,
+  route vers le mock ou le vrai backend selon le préfixe de l'id (même
+  logique que `useSession`), met à jour le cache react-query de la session
+  directement au succès (pas de refetch nécessaire).
+- `SessionPage.tsx` entièrement reconstruite : affiche toute la conversation
+  (le tout premier tour, qui n'est que l'URL collée, est masqué), messages
+  utilisateur en bulle alignée à droite / réponses en texte simple, zone de
+  saisie + bouton "Envoyer" pour affiner, illustrations chargement/erreur
+  réutilisées de Nouvelle session.
+- Vérifié en conditions réelles (Playwright, chemin mocké question libre
+  via interception de `/auth/me`) : conversation affichée correctement,
+  envoi d'un message de suivi fonctionne, champ vidé après envoi.
+
+## 2026-08-21 — Nouvelle session simplifiée à YouTube seul
+
+Sur instruction explicite : ne pas construire d'UI pour les types que le
+backend ne supporte pas encore (`article`/`notion_libre`, flashcards,
+export). Remplace la décision de la veille ("garder mocké, visible") —
+un sélecteur à 3 choix dont 2 ne mènent nulle part n'a pas de sens.
+
+**Fait :**
+- `NewSessionPage.tsx` : retrait du `ToggleGroup` de type de source (plus
+  qu'un seul type possible, un sélecteur à une option n'a pas de sens) —
+  juste un champ "Lien YouTube" + validation regex + bouton "Générer".
+  Résout au passage la dépréciation `z.string().url()` signalée par l'IDE
+  (n'est plus utilisée du tout dans ce fichier).
+- `useCreateSession.ts` simplifié : appelle directement
+  `createYoutubeSession()`, plus de branchement par `sourceType`.
+- Le mock `createSession()` (article/question libre) reste dans `api.ts`
+  au cas où, mais n'est plus appelé nulle part dans l'UI.
+- `CLAUDE.md` mis à jour en conséquence (voir section endpoints réels/mock).
+
+**Points en suspens (inchangés depuis hier, toujours valables) :**
+- Pas de route DELETE : une session créée puis dont l'appel `/message`
+  échoue reste orpheline dans PocketBase.
+- `getSessions()` réel existe mais toujours non consommé par un écran.

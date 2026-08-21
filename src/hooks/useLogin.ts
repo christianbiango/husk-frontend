@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
-import { login } from "@/lib/api";
-import { setStoredToken } from "@/lib/http";
+import { login } from "@/lib/auth";
+import { getApiErrorMessage, setStoredToken } from "@/lib/http";
 
 interface LoginInput {
   email: string;
@@ -9,7 +9,15 @@ interface LoginInput {
 
 export function useLogin() {
   return useMutation({
-    mutationFn: ({ email, password }: LoginInput) => login(email, password),
+    mutationFn: async ({ email, password }: LoginInput) => {
+      try {
+        return await login(email, password);
+      } catch (error) {
+        const message = getApiErrorMessage(error);
+        if (message) throw new Error(message);
+        throw error;
+      }
+    },
     onSuccess: ({ token }) => {
       setStoredToken(token);
     },
