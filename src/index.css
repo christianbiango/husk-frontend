@@ -9,6 +9,14 @@
 @theme inline {
     --font-heading: 'Fraunces Variable', serif;
     --font-sans: 'Geist Variable', sans-serif;
+    --text-display-lg: 34px;
+    --text-display-lg--line-height: 40px;
+    --text-display-md: 22px;
+    --text-display-md--line-height: 30px;
+    --text-body: 15px;
+    --text-body--line-height: 24px;
+    --text-caption: 13px;
+    --text-caption--line-height: 18px;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -91,18 +99,18 @@
     --card-foreground: oklch(0.97 0.01 75);
     --popover: oklch(0.21 0.012 75);
     --popover-foreground: oklch(0.97 0.01 75);
-    --primary: oklch(0.75 0.14 70);
-    --primary-foreground: oklch(0.18 0.03 70);
+    --primary: oklch(0.72 0.15 70);
+    --primary-foreground: oklch(0.22 0.04 70);
     --secondary: oklch(0.27 0.015 75);
     --secondary-foreground: oklch(0.95 0.01 75);
     --muted: oklch(0.27 0.015 75);
-    --muted-foreground: oklch(0.68 0.02 75);
+    --muted-foreground: oklch(0.5 0.02 75);
     --accent: oklch(0.3 0.03 70);
     --accent-foreground: oklch(0.95 0.02 70);
     --destructive: oklch(0.704 0.191 22.216);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.75 0.14 70);
+    --ring: oklch(0.72 0.15 70);
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
@@ -128,4 +136,19 @@
   html {
     @apply font-sans;
     }
+}
+
+@keyframes husk-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes husk-spin-rev {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(-360deg); }
+}
+
+@keyframes husk-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.82); }
 }

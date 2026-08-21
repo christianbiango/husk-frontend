@@ -246,3 +246,52 @@ changer ici tant que husk-backend expose cette route.
   déjà configuré ainsi (confirmé indirectement via le badge de statut
   API, pas relu directement — fichiers `.env*` bloqués en lecture/
   écriture pour Claude Code).
+
+## 2026-08-20 — Design system Claude Design intégré au code
+
+**Fait :**
+- Design system généré par Claude Design (fondations couleur/typo,
+  logo, illustrations) importé et adapté au code. Fichier source :
+  `~/Downloads/Husk Design System.html` (export "bundle" propriétaire,
+  ouvert et inspecté via Playwright headless pour en extraire les SVG
+  exacts plutôt que de redessiner à l'œil).
+- **Couleurs** : déjà alignées avec `index.css` (valident le travail
+  précédent). Correction mineure : les tokens dark de `--primary`
+  (Kernel) et `--muted-foreground` (Husk foreground) n'étaient pas
+  strictement identiques aux tokens light, alors que le design system
+  documente qu'ils doivent rester inchangés en mode sombre — corrigé.
+- **Typographie** : nouvelle échelle formalisée dans `index.css`
+  (`text-display-lg` 34/40, `text-display-md` 22/30, `text-body`
+  15/24, `text-caption` 13/18) et appliquée aux titres/descriptions de
+  Login, Nouvelle session, et Session (au lieu des tailles Tailwind
+  ad hoc précédentes).
+- **Logo** : mark "1a — l'écale entrouverte" (deux arcs concentriques
+  + grain ambre) implémenté en SVG réel dans `src/components/
+  HuskMark.tsx`, avec la règle de simplification sous 20px (l'arc
+  taupe disparaît, l'arc encre s'épaissit) et les couleurs branchées
+  sur les variables CSS existantes (`var(--foreground)`, `var(--muted-
+  foreground)`, `var(--primary)`) — bascule clair/sombre automatique,
+  sans logique JS. Intégré dans le header (`AuthenticatedLayout`) et
+  sur l'écran de connexion.
+- **Favicon** (`public/favicon.svg`) : remplacé par la variante
+  simplifiée du mark, avec un `@media (prefers-color-scheme: dark)`
+  intégré dans le SVG pour suivre le thème du système même hors app.
+- **Illustrations** (`src/components/illustrations/`) : les 3 motifs
+  du design system extraits en SVG exacts —
+  `ProcessingIllustration` (animée : deux arcs contrarotatifs + grain
+  pulsé, keyframes `husk-spin`/`husk-spin-rev`/`husk-pulse` ajoutées à
+  `index.css`) et `GenerationFailedIllustration` branchées dans
+  `NewSessionPage` (états `isPending`/`isError` de la génération, à la
+  place du texte d'erreur brut) ; `EmptySessionsIllustration` créée
+  mais pas encore utilisée (pas d'écran de liste de sessions pour
+  l'instant).
+- Vérifié en conditions réelles (Playwright, clair et sombre) : mark
+  et illustrations cohérents dans les deux thèmes, échelle
+  typographique appliquée, favicon chargé.
+
+**Volontairement pas fait** (voir échange avec l'utilisateur) : pas de
+regénération des composants d'interface (boutons, champs, cartes) —
+ils existent déjà en code et une maquette statique séparée aurait créé
+une deuxième source de vérité. Les icônes d'interface (chips Nouvelle
+session) restent Lucide, pas un set custom.
+

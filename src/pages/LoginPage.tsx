@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { ApiStatusBadge } from "@/components/ApiStatusBadge";
+import { HuskMark } from "@/components/HuskMark";
 import { useLogin } from "@/hooks/useLogin";
 import { getStoredToken } from "@/lib/http";
 
@@ -53,8 +54,9 @@ export function LoginPage() {
     <div className="flex min-h-svh flex-col items-center p-4 pt-16 sm:justify-center sm:pt-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Connexion à Husk</CardTitle>
-          <CardDescription>
+          <HuskMark size={32} className="mb-1" />
+          <CardTitle className="text-display-md">Connexion à Husk</CardTitle>
+          <CardDescription className="text-body">
             Entrez vos identifiants pour accéder à vos sessions.
           </CardDescription>
           <div className="pt-2">
