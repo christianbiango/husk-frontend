@@ -492,3 +492,94 @@ part — hors sujet ici, juste la disposition).
   en interceptant les routes réelles `/api/sessions*` pour simuler des
   réponses avec markdown) : rendu conforme sur les deux tailles, Entrée/
   Maj+Entrée fonctionnent, aucune erreur console.
+- Retrait du padding gauche superflu sur le texte des réponses IA (retour
+  utilisateur après capture d'écran).
+
+## 2026-08-21 — Écran Liste des sessions passées
+
+Dernier écran de SPEC.md à construire (§7). Ne remonte que les sessions
+réelles (`getSessions()` de `src/lib/sessions.ts`) — les sessions mockées
+ne sont plus créables depuis l'UI, les mélanger à une vraie liste aurait
+été trompeur.
+
+**Fait :**
+- `useSessions` (nouveau hook) + `SessionsListPage.tsx` : en-tête compact
+  ("Sessions" + bouton "+"), liste de lignes cliquables (badge type de
+  source, titre tronqué, date formatée) menant à `/session/:id`. États
+  chargement/erreur/vide gérés ; l'état vide réutilise enfin
+  `EmptySessionsIllustration` (construite avec le design system, jamais
+  utilisée jusqu'ici faute d'écran).
+- Nouvelle route `/sessions`. Accès depuis n'importe quel écran connecté
+  via une icône "historique" ajoutée au header partagé
+  (`AuthenticatedLayout`), à côté de la déconnexion.
+- Vérifié en conditions réelles (Playwright, mobile) : liste vide, liste
+  peuplée, clic sur une ligne → bonne session, navigation depuis l'icône
+  du header.
+
+**Points en suspens :**
+- Pagination non gérée (le backend la supporte via `page`/`per_page`,
+  mais `getSessions()` ne l'expose pas encore) — non bloquant tant que
+  le nombre de sessions reste faible.
+- Toujours pas d'écran flashcards/export (aucune route backend).
+
+## 2026-08-21 — Changement de direction : pas de page dédiée, blocs + barre latérale
+
+Revient sur l'entrée précédente (page `/sessions` séparée) : décision de
+l'utilisateur de ne pas avoir d'écran dédié. `SessionsListPage.tsx` et la
+route `/sessions` sont supprimées.
+
+**Fait :**
+- `src/lib/sessionDisplay.ts` (nouveau) : helpers d'affichage
+  (`sourceTypeLabels`, `formatSessionDate`) partagés entre les deux
+  nouveaux emplacements de la liste, pour ne pas dupliquer.
+- `SessionListItem.tsx` (nouveau) : bloc cliquable réutilisable (badge,
+  titre, date) — utilisé à la fois en ligne et dans la barre latérale.
+- `NewSessionPage.tsx` : sous le formulaire, section "Sessions récentes"
+  (5 plus récentes) affichée en blocs cliquables — masquée s'il n'y en a
+  aucune, pour ne pas distraire de l'action principale au tout début.
+- `SessionsSidebar.tsx` (nouveau) : barre latérale gauche avec la liste
+  complète des sessions, même comportement mobile et desktop (pas de
+  rail permanent, toujours une superposition). Construite sur
+  `@base-ui/react/dialog` stylé en panneau plutôt qu'un composant
+  maison — focus trap, fermeture Échap/clic-dehors/clic sur une session
+  obtenus gratuitement. Transitions d'entrée/sortie via les attributs
+  `data-starting-style`/`data-ending-style` de Base UI.
+- `AuthenticatedLayout.tsx` : l'icône "historique" devient un vrai menu
+  burger (`Menu` de lucide) qui ouvre la barre latérale ; l'état
+  d'ouverture vit dans le layout partagé, accessible depuis tous les
+  écrans connectés.
+- Piège rencontré : `nativeButton` sur le bouton de fermeture du tiroir
+  (`Dialog.Close` rendu comme notre `Button`, qui est un vrai
+  `<button>`) doit être omis/`true`, pas `false` — l'inverse de
+  `SessionPage`/`SessionsSidebar` où `Button` est rendu comme un
+  `Link` (`<a>`, pas un vrai bouton). Sens à vérifier au cas par cas
+  selon ce que `render` cible réellement.
+- Vérifié en conditions réelles (Playwright, mobile et desktop) : blocs
+  inline corrects, ouverture/fermeture du tiroir (clic, Échap, clic sur
+  une session), le fond reste inerte pendant que le tiroir est ouvert
+  (comportement modal correct), aucune erreur console.
+
+**Ajustements suite retour utilisateur :**
+- Header (`AuthenticatedLayout`) rendu `sticky top-0` avec un fond opaque
+  — il défilait avec la page dès qu'il y avait assez de contenu (aucun
+  conteneur de scroll dédié, c'est le document qui scrolle).
+- Largeur du tiroir : `w-[80%] max-w-sm` au lieu de `w-full max-w-xs` —
+  laisse toujours apparaître le fond sur le bord droit, plafonné pour ne
+  pas devenir démesuré sur grand écran. Vérifié : ratio mesuré = 0.80
+  sur un viewport mobile de 390px.
+- Retrait du bandeau titre/badge de `SessionPage` (celui avec le "+",
+  le badge type de source et le titre, juste sous le header) — la
+  conversation commence directement sous le nav. Le "+" (nouvelle
+  session) déménage dans la barre latérale : bouton "Nouvelle
+  conversation" pleine largeur, juste sous l'en-tête du tiroir, avant
+  la liste — plus visible qu'une simple icône, cohérent avec le pattern
+  "New chat" des apps de chat existantes.
+- Logo "Husk" du header rendu cliquable → `/nouvelle-session` (le
+  header n'existe que derrière `RequireAuth`, donc toujours accessible
+  quand ce lien a un sens).
+- Bug trouvé en testant ce dernier point : `SessionsSidebar` appelait
+  `useSessions()` sans le gater sur son état d'ouverture, donc chaque
+  page authentifiée déclenchait un `GET /sessions` en arrière-plan même
+  sidebar fermée — inutile, et risquait un faux déclenchement de
+  l'intercepteur 401 global sur un simple chargement de page. `useSessions`
+  accepte maintenant `{ enabled }`, passé à `open` par la sidebar.

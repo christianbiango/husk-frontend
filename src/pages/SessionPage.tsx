@@ -5,9 +5,9 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from "react";
-import { ArrowUp, Plus } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,13 +16,7 @@ import { GenerationFailedIllustration } from "@/components/illustrations/Generat
 import { ProcessingIllustration } from "@/components/illustrations/ProcessingIllustration";
 import { useSendMessage } from "@/hooks/useSendMessage";
 import { useSession } from "@/hooks/useSession";
-import type { Message, SourceType } from "@/lib/api";
-
-const sourceTypeLabels: Record<SourceType, string> = {
-  youtube: "YouTube",
-  article: "Article",
-  free_question: "Question libre",
-};
+import type { Message } from "@/lib/api";
 
 // Le tout premier tour est littéralement l'URL collée par l'utilisateur
 // (voir src/lib/sessions.ts) — pas utile à afficher comme message.
@@ -108,24 +102,6 @@ export function SessionPage() {
       )}
       {session && (
         <>
-          <div className="border-border flex items-center gap-2 border-b px-2 py-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="shrink-0"
-              nativeButton={false}
-              render={<Link to="/nouvelle-session" aria-label="Nouvelle session" />}
-            >
-              <Plus />
-            </Button>
-            <span className="bg-accent text-accent-foreground text-caption shrink-0 rounded-full px-2.5 py-1 font-medium tracking-[0.02em]">
-              {sourceTypeLabels[session.sourceType]}
-            </span>
-            <h1 className="font-heading truncate text-base font-medium">
-              {session.title}
-            </h1>
-          </div>
-
           <div className="flex-1 overflow-y-auto px-4 py-4">
             <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
               {getVisibleHistory(session.history, session.sourceUrl).map(
